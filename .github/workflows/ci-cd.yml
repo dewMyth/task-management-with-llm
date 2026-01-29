@@ -1,0 +1,47 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches:
+      - master
+  pull_request:
+    branches:
+      - master
+
+jobs:
+  build-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-node@v3
+        with:
+          node-version: 18
+      - run: npm install
+
+  docker-deploy:
+    runs-on: ubuntu-latest
+    needs: build-test
+    steps:
+      - uses: actions/checkout@v3
+
+        # Install Docker CLI (usually pre-installed)
+      - name: Set up Docker Buildx
+        uses:
+          docker/setup-buildx-action@v2
+
+          # Login to Railway
+      - name: Install Railway CLI
+        run: curl -sSL https://railway.app/install.sh | sh
+
+      - name: Railway Login
+        run: railway login --apiKey ${{ secrets.RAILWAY_API_KEY }}
+
+      # Build Docker image
+      - name: Build Docker image
+        run: docker build -t task-manager-app .
+
+      # Deploy Docker image to Railway
+      - name: Deploy to Railway
+        run: |
+          # Push & deploy Docker image using Railway CLI
+          railway up --project ${{ secrets.RAILWAY_PROJECT_ID }} --detach
